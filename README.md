@@ -20,6 +20,7 @@ data['unix'] = data['unix'].astype(str).str[:10] # Manual adjustment of the time
 data['date'] =   pd.to_datetime(data.unix, unit='s') # Convert dates. Attention UNIX EPOCH time has three 0's too many.
 data = data.iloc[::-1] # flip upside down
 data.reset_index(drop=True, inplace = True) # Create a new index
+data
 ````
 
 | |	unix	| open	| high |	low |	close |	Volume BTC |	date |
@@ -28,6 +29,8 @@ data.reset_index(drop=True, inplace = True) # Create a new index
 | 1 | 1502949600 | 4315.32 | 4345.45 | 4309.37 | 4324.35 | 7.230000 | 2017-08-17 06:00:00 |
 | 2 | 1502953200 | 4324.35 | 4349.99 | 4287.41 | 4349.99 | 4.440000 | 2017-08-17 07:00:00 |
 
+
+Here is a plot of the price development
 
 ````python
 # figure
