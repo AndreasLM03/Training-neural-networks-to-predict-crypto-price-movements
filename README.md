@@ -344,3 +344,203 @@ data.to_csv (file_name, index = False, header=True)
 
 After that I want to create figures to train the model. 
 For this, I again look at individual time windows and create mapping from them. Through the calculated decision support, I can then assign to the model whether a good or bad opportunity for a long position exists.
+
+
+## Create figures and train model
+
+
+````python
+import os
+from os import listdir
+from os import makedirs
+from os.path import isfile, join
+import sys
+
+import pandas as pd
+import numpy as np
+import math
+import shutil
+
+from datetime import datetime
+import datetime 
+from PIL import Image
+
+import uuid
+#plt.style.use('ggplot')
+#%matplotlib inline
+
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import matplotlib.dates as mpl_dates
+import matplotlib.pyplot as plt
+#from matplotlib import pyplot
+
+from mpl_finance import candlestick_ohlc
+
+from keras.utils import to_categorical
+from keras.applications.vgg16 import VGG16
+from keras.models import Model
+from keras.layers import Dense
+from keras.layers import Flatten
+from keras.optimizers import SGD
+from keras.preprocessing.image import ImageDataGenerator
+````
+Folders must be properly set up
+
+````python
+path_ = 'D:/your path where you want to store your figures/'
+
+average_length_current = 60 # in hours
+average_length_future = 24  # in hours
+distance_time =  2          # in hours x-axis
+distance_value = 2          # in precent y-axis
+distance_value = 1+(distance_value/100) # 
+parameter = ['60_24_2_1.02'] # Folder [average_length_current average_length_future distance_time distance_value]
+
+for i in parameter:
+    path_parameter = path_ + i + '/'
+    print('Subdirectories were created in ' + path_parameter)
+    subdirs = ['export/', 'train/', 'validation/']
+    for subdir in subdirs:
+        labeldirs = ['Var1/', 'Var2/']
+        for labldir in labeldirs:
+            newdir = path_parameter + subdir + labldir
+            makedirs(newdir, exist_ok=True)
+    subdirs = ['chrono/']
+    for subdir in subdirs:
+        newdir = path_parameter + subdir
+        makedirs(newdir, exist_ok=True)
+````
+The classification file that was created earlier is loaded here again
+
+```` python
+csv_file = 'classification.csv'
+
+# Load data
+float_formatter = "{:.2f}".format
+np.set_printoptions(formatter={'float_kind':float_formatter})
+dataset = []
+dataset = pd.read_csv(csv_file, index_col=False)
+dataset['date'] = pd.to_datetime(dataset['date']) # convert object / string to datetime
+````
+
+### Candlestick chart must be created to train the neural network
+
+For this purpose, the past 60 hours are considered and a figure is created from them. For a better result, the image should be filled with more features, here I added the moving averages. But also indicators like resistances or trend channels can be added.
+
+Images that represent a good buy or sell signal are stored in different folders depending on their previous classification. 
+
+````python
+for k in range(average_length_current-1,len(dataset)):
+    extract = dataset.iloc[k-average_length_current+1:k+1]
+    f = lambda x: mdates.date2num(datetime.datetime.fromtimestamp(x)) # damit candlestick funktioniert, muss die Zeit in matplotlib umgewandelt werden
+    fig, ax = plt.subplots(num=1, figsize=(3, 3), dpi=80, facecolor='w', edgecolor='k')
+    ohlc = list(zip(extract['unix'].apply(f), extract['open'],extract['high'],extract['low'],extract['close'], extract['Volume BTC']))
+    candlestick_ohlc(ax, ohlc, colorup='#77d879', colordown='#db3f3f', width = 0.05, alpha=0.5)
+    plt.plot(extract['date'],extract['average_length_current'], color="b", linewidth=5, alpha=0.5)
+    plt.plot(extract['date'],extract['average_length_future'], color="c", linewidth=5, alpha=0.5)
+    ############### Add more identifying features ###############
+    plt.autoscale()
+    plt.axis('off')
+    # Save the figures according to the classification in Buy and Sell
+    if extract.iloc[-1,-1] == -1: #sell 
+        plt.savefig(path_parameter + 'export/Var1/' + str(uuid.uuid4())+'.jpg') # assign random names so that no order can be determined
+    elif extract.iloc[-1,-1] == 1: #buy
+        plt.savefig(path_parameter + 'export/Var2/' + str(uuid.uuid4())+'.jpg') # assign random names so that no order can be determined
+    plt.cla()
+    plt.clf()
+````
+For my data set up to and including February 17, 2021, 9.269 figures have now been created as a buy signal and 23,943 as a sell signal. An example figure is shown below
+
+<img src= "05.jpg" width="400">
+
+### Adjusted all images to the correct format
+In order for the images to be used for training, they must be put into a proper format
+
+````python
+new_hight = 224
+new_width = 224
+var = ['export/var1/', 'export/var2/']
+def resize():
+        for item in dirs:
+            if os.path.isfile(path+item):
+                im = Image.open(path+item)
+                f, e = os.path.splitext(path+item)
+                width, height = im.size  
+                if width != new_width:
+                    if height != new_hight:
+                        #print(width, height) 
+                        imResize = im.resize((new_hight,new_width), Image.ANTIALIAS)
+                        imResize.save(f + '.jpg', 'JPEG', quality=100)
+
+for x in var:
+    path = path_parameter + x
+    dirs = os.listdir(path)
+    resize()
+````
+### Start storing images in the right way
+80% of the data is used for training. 20% (split_factor) is used for validation, for which the images are moved to the appropriate folders
+
+````python 
+var = ['var1', 'var2']
+split_factor = 0.2
+for x in var:
+    exportdir = path_parameter + 'export/' + x + '/'
+    traindir = path_parameter + 'train/' + x + '/'
+    validir  = path_parameter + 'validation/' + x + '/'
+
+    # cut the files from the export and paste them into the training folder
+    FileList = [f for f in listdir(exportdir) if isfile(join(exportdir, f))]
+    Quantity_to_move = math.ceil(len(FileList))
+    for x in range(0, Quantity_to_move):
+        source_name = (exportdir + FileList[x])
+        target_name = (traindir + FileList[x])
+        shutil.move(source_name, target_name)
+    # cut 20% of the files from trian and paste them into validation folder
+    FileList = [f for f in listdir(traindir) if isfile(join(traindir, f))]
+    Quantity_to_move = math.ceil(len(FileList)*split_factor)
+    for x in range(0, Quantity_to_move):
+        source_name = (traindir + FileList[x])
+        target_name = (validir + FileList[x])
+        shutil.move(source_name, target_name)
+ ````
+ ### Train Model
+ To train the model, I take very good pre-trained model (VGG16). Then the model is trained based on the saved figures
+ 
+ ````python
+ def define_model():
+    model = VGG16(include_top=False, input_shape=(224, 224, 3)) # load model
+    for layer in model.layers: # mark loaded layers as not trainable
+        layer.trainable = False # mark loaded layers as not trainable
+    flat1 = Flatten()(model.layers[-1].output) # add new classifier layers
+    class1 = Dense(128, activation='relu', kernel_initializer='he_uniform')(flat1)
+    output = Dense(1, activation='sigmoid')(class1)
+    model = Model(inputs=model.inputs, outputs=output) # define new model
+    opt = SGD(lr=0.001, momentum=0.9) # compile model
+    model.compile(optimizer=opt, loss='binary_crossentropy', metrics=['accuracy'])
+    return model
+
+def run_test_harness():
+    model = define_model() # define model
+    datagen = ImageDataGenerator(featurewise_center=True) # create data generator
+    datagen.mean = [123.68, 116.779, 103.939] # specify imagenet mean values for centering
+    train_it = datagen.flow_from_directory(path_parameter + 'train/', 
+        class_mode='binary', batch_size=64, target_size=(224, 224)) # prepare iterator
+    test_it = datagen.flow_from_directory(path_parameter + 'validation/',
+        class_mode='binary', batch_size=64, target_size=(224, 224))
+    history = model.fit_generator(train_it, steps_per_epoch=len(train_it),
+        validation_data=test_it, validation_steps=len(test_it), epochs=epochs, verbose=1) # fit model
+    _, acc = model.evaluate_generator(test_it, steps=len(test_it), verbose=0) # evaluate model
+    print('> %.3f' % (acc * 100.0))
+    model.save(path_parameter + '_model.h5') # save model
+
+epochs = 6
+run_test_harness() # entry point, run the test harness
+print(str(datetime.datetime.now()) + ' Model trained')
+````
+
+Found 26569 images belonging to 2 classes.
+
+Found 6643 images belonging to 2 classes.
+
+Epoch 1/6
