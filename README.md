@@ -576,7 +576,7 @@ import matplotlib.pyplot as plt
 #from matplotlib import pyplot
 
 from mpl_finance import candlestick_ohlc
-
+import datetime  
 from keras.utils import to_categorical
 from keras.applications.vgg16 import VGG16
 from keras.models import Model
@@ -598,25 +598,45 @@ distance_time =  2          # in hours x-axis
 distance_value = 2          # in precent y-axis
 distance_value = 1+(distance_value/100) # 
 
-path_ = 'your path'
+path_ = 'C:/Users/andre/Bilder/DeepLearning/'
+path_ = 'D:/finance/crypto/'
 parameter = ['60_24_2_1.02'] # Folder [average_length_current average_length_future distance_time distance_value]
 for i in parameter:
     path_parameter = path_ + i + '/'
 
-csv_file = 'classification.csv'
+# csv_file = 'classification.csv'
 
-# Load data
-float_formatter = "{:.2f}".format
-np.set_printoptions(formatter={'float_kind':float_formatter})
-dataset = []
-dataset = pd.read_csv(csv_file, index_col=False)
-dataset['date'] = pd.to_datetime(dataset['date']) # convert object / string to datetime
+# # Load data
+# float_formatter = "{:.2f}".format
+# np.set_printoptions(formatter={'float_kind':float_formatter})
+# dataset = []
+# dataset = pd.read_csv(csv_file, index_col=False)
+# dataset['date'] = pd.to_datetime(dataset['date']) # convert object / string to datetime
+
+url="https://www.cryptodatadownload.com/cdd/Binance_BTCUSDT_1h.csv"
+data =pd.read_csv(url, skiprows=1) 
+data.drop(['date', 'symbol', 'Volume USDT', 'tradecount'], axis=1, inplace = True) # Delete unnecessary data
+data['unix'] = data['unix'].astype(str).str[:10] # Manual adjustment of the time dataset - If Unixtime has more than 10 digits, it must be divided by 1000
+data['unix'] = data.unix.astype(int)
+data['date'] =   pd.to_datetime(data.unix, unit='s') # Convert dates. Attention UNIX EPOCH time has three 0's too many.
+data = data.iloc[::-1] # flip upside down
+data.reset_index(drop=True, inplace = True) # Create a new index
+
+average_length_current = 60 # in hours
+average_length_future = 24  # in hours
+distance_time =  2          # in hours x-axis
+distance_value = 2          # in precent y-axis
+distance_value = 1+(distance_value/100) # 
+
+# create moving averages
+data['average_length_current'] = data.loc[:,"close"].rolling(window=average_length_current).mean()
+data['average_length_future'] =  data.loc[:,"close"].rolling(window=average_length_future).mean()
 ````
 
 Load the current course. The hourly data can be obtained via APIs from exchanges. However, you must create the same figures with the same features.
 
 ```` python
-extract = dataset.iloc[-average_length_current:]
+extract = data.iloc[-average_length_current:]
 f = lambda x: mdates.date2num(datetime.datetime.fromtimestamp(x)) # for candlestick to work, time must be converted to matplotlib
 fig, ax = plt.subplots(num=1, figsize=(3, 3), dpi=80, facecolor='w', edgecolor='k')
 ohlc = list(zip(extract['unix'].apply(f), extract['open'],extract['high'],extract['low'],extract['close'], extract['Volume BTC']))
@@ -641,6 +661,7 @@ file_number = math.ceil(len(file_list)) #Anzahl der vorhandenen Bilder im Chrono
 # initiate an output table
 output = pd.DataFrame((np.zeros((0,3))), columns = ['unix', 'time', 'prediction']) 
 
+
 # load and prepare the image
 def load_image(file_name):
     # load the image
@@ -652,11 +673,12 @@ def load_image(file_name):
 # prediction
 for x in range(0, file_number):
     figure_name = figures_path + file_list[x]
+    print(figure_name)
     img = load_image(figure_name)
     output.loc[x,"unix"] = str(file_list[x])[:-4]
     output.loc[x,"time"] = pd.to_datetime(str(file_list[x])[:-4], unit='s')
     output.loc[x,"prediction"] = model.predict(img)[0][0]
-
+    
 # save pandas as CSV
 file_name = "output_prediction.csv"
 output.to_csv (file_name, index = False, header=True)
