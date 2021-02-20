@@ -549,7 +549,7 @@ Epoch 1/2
 
 
 
-# Training-neural-networks-to-predict-crypto-price-movements
+# Actual Prediction
 
 ````python 
 import os
@@ -649,8 +649,15 @@ plt.axis('off')
 plt.savefig(path_parameter + 'chrono/' + str(extract.iloc[-1,0]) + '.jpg')
 plt.cla() #Reset figure content
 plt.clf() #Reset figure content
+````
+
+<img src= "1613779200.jpg" width="400">
 
 
+The DeepLearning model does not yet know this image and will now make a prediction whether it is a good or a bad opportunity to shop
+
+
+````python
 # From here the actual prediction starts
 model = load_model(path_parameter + '_model.h5') # load model
 figures_path = path_parameter + 'chrono/' #load the path where the images are stored
@@ -684,4 +691,11 @@ file_name = "output_prediction.csv"
 output.to_csv (file_name, index = False, header=True)
 ````
 
-If the score goes more in the direction of 1, it implies that it is a good time to open a long position. If the result is going to be 0, then it is better to give up the position.
+If the prediction-score goes more in the direction of 1, it implies that it is a good time to open a long position. If the result is going to be 0, then it is better to give up the position.
+
+|| unix | time | prediction | 
+|     :---:      | :---:      | :---:      | :---:      | 
+|0 | 1613779200 | 2021-02-20 00:00:00 | 0.979756 | 
+
+
+# Happy trading
