@@ -534,7 +534,7 @@ def run_test_harness():
     print('> %.3f' % (acc * 100.0))
     model.save(path_parameter + '_model.h5') # save model
 
-epochs = 2
+epochs = 4
 run_test_harness() # entry point, run the test harness
 print(str(datetime.datetime.now()) + ' Model trained')
 ````
@@ -543,10 +543,19 @@ Found 26569 images belonging to 2 classes.
 
 Found 6643 images belonging to 2 classes.
 
-Epoch 1/2
+Epoch 1/4
+971/971 [==============================] - 273s 281ms/step - loss: 0.2189 - accuracy: 0.9254 - val_loss: 0.0211 - val_accuracy: 0.9753
 
-416/416 [==============================] - 1658s 4s/step - loss: nan - accuracy: 0.8399 - val_loss: nan - val_accuracy: 0.2791
+Epoch 2/4
+971/971 [==============================] - 223s 230ms/step - loss: 0.0582 - accuracy: 0.9784 - val_loss: 0.0079 - val_accuracy: 0.9831
 
+Epoch 3/4
+971/971 [==============================] - 223s 230ms/step - loss: 0.0370 - accuracy: 0.9864 - val_loss: 0.0486 - val_accuracy: 0.9826
+
+Epoch 4/4
+971/971 [==============================] - 226s 232ms/step - loss: 0.0296 - accuracy: 0.9894 - val_loss: 9.2387e-04 - val_accuracy: 0.9840
+
+> 98.397
 
 
 # Actual Prediction
