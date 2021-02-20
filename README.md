@@ -715,7 +715,7 @@ If the prediction-score goes more in the direction of 1, it implies that it is a
 
 || unix | time | prediction | 
 |     :---:      | :---:      | :---:      | :---:      | 
-|0 | 1613779200 | 2021-02-20 00:00:00 | 0.979756 | 
+|0 | 1613779200 | 2021-02-20 00:00:00 | 0.997728 | 
 
 
 # Happy trading
