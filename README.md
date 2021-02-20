@@ -540,8 +540,11 @@ print(str(datetime.datetime.now()) + ' Model trained')
 ````
 
 Found 26569 images belonging to 2 classes.
+
 Found 6643 images belonging to 2 classes.
+
 Epoch 1/2
+
 416/416 [==============================] - 1658s 4s/step - loss: nan - accuracy: 0.8399 - val_loss: nan - val_accuracy: 0.2791
 
 
@@ -608,8 +611,11 @@ np.set_printoptions(formatter={'float_kind':float_formatter})
 dataset = []
 dataset = pd.read_csv(csv_file, index_col=False)
 dataset['date'] = pd.to_datetime(dataset['date']) # convert object / string to datetime
+````
 
+Load the current course. The hourly data can be obtained via APIs from exchanges. However, you must create the same figures with the same features.
 
+```` python
 extract = dataset.iloc[-average_length_current:]
 f = lambda x: mdates.date2num(datetime.datetime.fromtimestamp(x)) # for candlestick to work, time must be converted to matplotlib
 fig, ax = plt.subplots(num=1, figsize=(3, 3), dpi=80, facecolor='w', edgecolor='k')
@@ -656,3 +662,4 @@ file_name = "output_prediction.csv"
 output.to_csv (file_name, index = False, header=True)
 ````
 
+If the score goes more in the direction of 1, it implies that it is a good time to open a long position. If the result is going to be 0, then it is better to give up the position.
