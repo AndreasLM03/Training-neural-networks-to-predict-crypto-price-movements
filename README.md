@@ -534,13 +534,125 @@ def run_test_harness():
     print('> %.3f' % (acc * 100.0))
     model.save(path_parameter + '_model.h5') # save model
 
-epochs = 6
+epochs = 2
 run_test_harness() # entry point, run the test harness
 print(str(datetime.datetime.now()) + ' Model trained')
 ````
 
 Found 26569 images belonging to 2 classes.
-
 Found 6643 images belonging to 2 classes.
+Epoch 1/2
+416/416 [==============================] - 1658s 4s/step - loss: nan - accuracy: 0.8399 - val_loss: nan - val_accuracy: 0.2791
 
-Epoch 1/6
+
+
+# Training-neural-networks-to-predict-crypto-price-movements
+
+````python 
+import os
+from os import listdir
+from os import makedirs
+from os.path import isfile, join
+import sys
+
+import pandas as pd
+import numpy as np
+import math
+import shutil
+import datetime
+from PIL import Image
+
+import uuid
+#plt.style.use('ggplot')
+#%matplotlib inline
+
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+import matplotlib.dates as mpl_dates
+import matplotlib.pyplot as plt
+#from matplotlib import pyplot
+
+from mpl_finance import candlestick_ohlc
+
+from keras.utils import to_categorical
+from keras.applications.vgg16 import VGG16
+from keras.models import Model
+from keras.layers import Dense
+from keras.layers import Flatten
+from keras.optimizers import SGD
+from keras.preprocessing.image import ImageDataGenerator
+
+from keras.preprocessing.image import load_img
+from keras.preprocessing.image import img_to_array
+from keras.models import load_model
+````
+
+````python
+# Initialization
+average_length_current = 60 # in hours
+average_length_future = 24  # in hours
+distance_time =  2          # in hours x-axis
+distance_value = 2          # in precent y-axis
+distance_value = 1+(distance_value/100) # 
+
+path_ = 'your path'
+parameter = ['60_24_2_1.02'] # Folder [average_length_current average_length_future distance_time distance_value]
+for i in parameter:
+    path_parameter = path_ + i + '/'
+
+csv_file = 'classification.csv'
+
+# Load data
+float_formatter = "{:.2f}".format
+np.set_printoptions(formatter={'float_kind':float_formatter})
+dataset = []
+dataset = pd.read_csv(csv_file, index_col=False)
+dataset['date'] = pd.to_datetime(dataset['date']) # convert object / string to datetime
+
+
+extract = dataset.iloc[-average_length_current:]
+f = lambda x: mdates.date2num(datetime.datetime.fromtimestamp(x)) # for candlestick to work, time must be converted to matplotlib
+fig, ax = plt.subplots(num=1, figsize=(3, 3), dpi=80, facecolor='w', edgecolor='k')
+ohlc = list(zip(extract['unix'].apply(f), extract['open'],extract['high'],extract['low'],extract['close'], extract['Volume BTC']))
+candlestick_ohlc(ax, ohlc, colorup='#77d879', colordown='#db3f3f', width = 0.05, alpha=0.5)
+plt.plot(extract['date'],extract['average_length_current'], color="b", linewidth=5, alpha=0.5)
+plt.plot(extract['date'],extract['average_length_future'], color="c", linewidth=5, alpha=0.5)
+
+plt.autoscale()
+plt.axis('off')
+plt.savefig(path_parameter + 'chrono/' + str(extract.iloc[-1,0]) + '.jpg')
+plt.cla() #Reset figure content
+plt.clf() #Reset figure content
+
+
+# From here the actual prediction starts
+model = load_model(path_parameter + '_model.h5') # load model
+figures_path = path_parameter + 'chrono/' #load the path where the images are stored
+file_list = [f for f in listdir(figures_path) if isfile(join(figures_path, f))] #erstelle Dateiliste aller Namen im Chrono-Ordner
+file_number = math.ceil(len(file_list)) #Anzahl der vorhandenen Bilder im Chrono-Ordner
+
+
+# initiate an output table
+output = pd.DataFrame((np.zeros((0,3))), columns = ['unix', 'time', 'prediction']) 
+
+# load and prepare the image
+def load_image(file_name):
+    # load the image
+    img = load_img(file_name, target_size=(224, 224)) # prepare
+    img = img_to_array(img) # convert to array
+    img = img.reshape(1, 224, 224, 3) # reshape into a single sample with 3 channels
+    return img
+
+# prediction
+for x in range(0, file_number):
+    figure_name = figures_path + file_list[x]
+    img = load_image(figure_name)
+    output.loc[x,"unix"] = str(file_list[x])[:-4]
+    output.loc[x,"time"] = pd.to_datetime(str(file_list[x])[:-4], unit='s')
+    output.loc[x,"prediction"] = model.predict(img)[0][0]
+
+# save pandas as CSV
+file_name = "output_prediction.csv"
+output.to_csv (file_name, index = False, header=True)
+````
+
